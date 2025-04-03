@@ -3,3 +3,6 @@
 *.pcap
 *.pcapng
 
+.vscode
+udp_ping/*.o
+udp_ping/udpping
