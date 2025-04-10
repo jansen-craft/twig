@@ -1,3 +1,5 @@
+#define UDP_IOV_LENGTH  5
+
 struct tcp_header {
     u_int16_t source_port;
     u_int16_t destination_port;
@@ -134,14 +136,14 @@ void udp_ping(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header 
     compute_udp_checksum(ip4h, uh, payload.data(), payload.size());
 
     // send it out!
-    struct iovec iov[5] = {
+    struct iovec iov[UDP_IOV_LENGTH] = {
         {&pph, sizeof(pcap_packet_header)},
         {&eh, sizeof(ethernet_header)},
         {&ip4h, sizeof(ipv4_header)},
         {&uh, sizeof(udp_header)},
         {payload.data(), payload.size()}};
 
-    int rval = writev(fd, iov, 5);
+    int rval = writev(fd, iov, UDP_IOV_LENGTH);
     if (rval == -1) {
         perror("Error writing echo reply");
         exit(1);
@@ -180,14 +182,14 @@ void send_time(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header
     compute_udp_checksum(ip4h, uh, &time_protocol_time, sizeof(time_protocol_time));
 
     // send out
-    struct iovec iov[5] = {
+    struct iovec iov[UDP_IOV_LENGTH] = {
         {&pph, sizeof(pcap_packet_header)},
         {&eh, sizeof(ethernet_header)},
         {&ip4h, sizeof(ipv4_header)},
         {&uh, sizeof(udp_header)},
         {&time_protocol_time, sizeof(time_protocol_time)}};
 
-    int rval = writev(fd, iov, 5);
+    int rval = writev(fd, iov, UDP_IOV_LENGTH);
     if (rval == -1) {
         perror("Error writing TIME reply");
     }

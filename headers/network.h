@@ -5,6 +5,8 @@
 #define IPPROTOCOL_TCP 6
 #define IPPROTOCOL_UDP 17
 #define ICMP_ECHO 0
+
+#define ICMP_IOV_LENGTH  5
 #include "pcap.h"
 
 struct ipv4_header {
@@ -148,41 +150,31 @@ void compute_icmp_checksum(icmp_header &header, const vector<unsigned char> &pay
     if (header.checksum == 0) header.checksum = 0xFFFF;  // pad 1's
 }
 
-void icmp_echo_reply(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header &i4h, icmp_header &ich, vector<unsigned char> &payload) {
-    swap(i4h.source_address, i4h.destination_address);
+void icmp_echo_reply(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header &ip4h, icmp_header &ich, vector<unsigned char> &payload) {
+    swap(ip4h.source_address, ip4h.destination_address);
     ich.type = ICMP_ECHO;
 
     // hokey pokey -> turn yourself around
-    i4h.total_length = ntohs(i4h.total_length);
-    i4h.identification = ntohs(i4h.identification);
-    i4h.fragmentation_offset = ntohs(i4h.fragmentation_offset);
-    i4h.checksum = ntohs(i4h.checksum);
-    i4h.source_address = ntohl(i4h.source_address);
-    i4h.destination_address = ntohl(i4h.destination_address);
+    ip4h.total_length = ntohs(ip4h.total_length);
+    ip4h.identification = ntohs(ip4h.identification);
+    ip4h.fragmentation_offset = ntohs(ip4h.fragmentation_offset);
+    ip4h.checksum = ntohs(ip4h.checksum);
+    ip4h.source_address = ntohl(ip4h.source_address);
+    ip4h.destination_address = ntohl(ip4h.destination_address);
     ich.data = ntohl(ich.data);
 
     compute_icmp_checksum(ich, payload, payload.size());
-    compute_ipv4_checksum(i4h);
+    compute_ipv4_checksum(ip4h);
 
     // send it out!
-    struct iovec iov[10];
-    int v = 0;
-    iov[v].iov_base = (void *)&pph;
-    iov[v].iov_len = sizeof(pcap_packet_header);
-    ++v;
-    iov[v].iov_base = (void *)&eh;
-    iov[v].iov_len = sizeof(ethernet_header);
-    ++v;
-    iov[v].iov_base = (void *)&i4h;
-    iov[v].iov_len = sizeof(ipv4_header);
-    ++v;
-    iov[v].iov_base = (void *)&ich;
-    iov[v].iov_len = sizeof(icmp_header);
-    ++v;
-    iov[v].iov_base = payload.data();
-    iov[v].iov_len = payload.size();
-    ++v;
-    int rval = writev(fd, iov, v);
+    struct iovec iov[ICMP_IOV_LENGTH] = {
+        {&pph, sizeof(pcap_packet_header)},
+        {&eh, sizeof(ethernet_header)},
+        {&ip4h, sizeof(ipv4_header)},
+        {&ich, sizeof(icmp_header)},
+        {payload.data(), payload.size()}};
+
+    int rval = writev(fd, iov, ICMP_IOV_LENGTH);
     if (rval == -1) {
         perror("Error writing echo reply");
         exit(1);

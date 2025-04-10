@@ -1,5 +1,7 @@
 #define ETHERTYPE_IPV4 8
 #define ETHERTYPE_ARP 1544
+#define ARP_REQUEST 1
+#define ARP_REPLY 2
 #include "utils.h"
 
 struct ethernet_header {
@@ -60,8 +62,8 @@ void print_arp(arp_header *header) {
     printf("\t\thlen:\t%u\n", header->hardware_address_length);
     printf("\t\tplen:\t%u\n", header->protocol_address_length);
     printf("\t\tOP:\t%u", header->operation);
-    if (header->operation == 1) printf(" (ARP request)");
-    if (header->operation == 2) printf(" (ARP reply)");
+    if (header->operation == ARP_REQUEST) printf(" (ARP request)");
+    if (header->operation == ARP_REPLY) printf(" (ARP reply)");
     printf("\n");
     printf("\t\tHardware:\t");
     print_ethernet_address(header->sender_hardware_address);
