@@ -8,6 +8,7 @@
 #include <vector>
 #include <iomanip>
 #include <sys/uio.h> //writev
+#include <map> // map
 #include "headers/utils.h"
 #include "headers/pcap.h"
 #include "headers/data_link.h"
@@ -18,39 +19,36 @@ using namespace std;
 int debug = 0;
 bool correct_endian = false;
 
+bool usage(const char* prog, bool is_error) {
+    printf("Usage: %s [-h] [-d|-dd|-ddd] -i <file>\n", prog);
+	return is_error;
+}
+
 int main(int argc, char *argv[]){
 	struct pcap_file_header file_header;
 	char *filename = NULL;
-	int in_fd = STDIN_FILENO; 
+	map<string,string> arp_cache;
 
-	if (argc >= 3 && (strcmp(argv[1], "-i") == 0)){
-		filename = create_network_filename(argv[2]);
-	} else if ((argc == 3) && (strcmp(argv[1], "-d") == 0)){
-		debug = 1;
-		filename = argv[2];
-	} else if ((argc == 3) && (strcmp(argv[1], "-n") == 0)){
-		filename = argv[2];
-	} else {
-            fprintf(stderr, "Error: Unknown option '%s'\n", argv[0]);
-            fprintf(stdout, "Usage: %s [-d] filename\n", argv[0]);
+	for (int i = 1; i < argc; i++) {
+        if		(!strcmp(argv[i], "-i") && i+1 < argc) filename = create_network_filename(argv[++i]);
+        else if (!strcmp(argv[i], "-h"))	return usage(argv[0], 0);
+        else if (!strcmp(argv[i], "-d"))	debug = 1;
+        else if (!strcmp(argv[i], "-dd"))	debug = 2;
+        else if (!strcmp(argv[i], "-ddd"))	debug = 3;
+        else 	return usage(argv[0], 1); 
     }
 
-	printf("DEBUG LEVEL: %i\n", debug);
+	if (!filename) return usage(argv[0], 1);
 
-	if (strcmp(filename, "-") != 0) {
-        in_fd = open(filename, O_RDONLY | O_CREAT | O_APPEND, 0644);
-        if (in_fd == -1) {
-			printf("filename: %s\n", filename);
-            perror("Error opening input file");
-            return 1;
-        }
-    }
+	int in_fd = open(filename, O_RDONLY);
+	if (in_fd == -1) {
+		perror("Error opening input file");
+		return 1;
+	}
 
 	int out_fd = open(filename, O_RDWR | O_CREAT | O_APPEND, 0644);
-
 	if (out_fd == -1) {
 		perror("Error opening output file");
-		close(out_fd);
 		return 1;
 	}
 
