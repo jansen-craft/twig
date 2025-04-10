@@ -87,23 +87,15 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header) {
 }
 
 int main(int argc, char *argv[]) {
-    struct pcap_file_header file_header;
     char *filename = NULL;
-    map<string, string> arp_cache;
 
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-i") && i + 1 < argc)
-            filename = create_network_filename(argv[++i]);
-        else if (!strcmp(argv[i], "-h"))
-            return usage(argv[0], 0);
-        else if (!strcmp(argv[i], "-d"))
-            debug = 1;
-        else if (!strcmp(argv[i], "-dd"))
-            debug = 2;
-        else if (!strcmp(argv[i], "-ddd"))
-            debug = 3;
-        else
-            return usage(argv[0], 1);
+        if (!strcmp(argv[i], "-i") && i + 1 < argc) filename = create_network_filename(argv[++i]);
+        else if (!strcmp(argv[i], "-h"))    return usage(argv[0], 0);
+        else if (!strcmp(argv[i], "-d"))    debug = 1;
+        else if (!strcmp(argv[i], "-dd"))   debug = 2;
+        else if (!strcmp(argv[i], "-ddd"))  debug = 3;
+        else    return usage(argv[0], 1);
     }
 
     if (!filename) return usage(argv[0], 1);
@@ -120,14 +112,14 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // pcap file header
+    struct pcap_file_header file_header;
     correct_endian = parse_file_header(in_fd, file_header);
     print_file_header(&file_header);
 
+    // parse each packet
     int unsucessful_parse_attempts = 0;
-
     while (1) {
-        pcap_packet_header packet_header;
-
         off_t current_pos = lseek(in_fd, 0, SEEK_CUR);
         if (current_pos == -1) {
             perror("Error getting current file position");
@@ -135,11 +127,11 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
+        pcap_packet_header packet_header;
         ssize_t bytes_read = parse_packet_header(in_fd, packet_header, correct_endian);
 
         if (bytes_read == 0) {
-            unsucessful_parse_attempts++;
-            if (unsucessful_parse_attempts == 5) {
+            if (++unsucessful_parse_attempts == 5) {
                 printf("listening...\n");
             }
             lseek(in_fd, current_pos, SEEK_SET);
