@@ -2,7 +2,10 @@
 *.dmp
 *.pcap
 *.pcapng
+*.o
 
+socket_time
+twig
 .vscode
 udp_ping/*.o
 udp_ping/udpping
