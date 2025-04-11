@@ -20,7 +20,7 @@ void print_ip_address(u_int32_t address) {
     printf("%i\t", (address >> 0) & 0xFF);
 }
 
-char* create_network_filename(const char* input) {
+char* create_network_filename(const char* input, u_int32_t &ip) {
     const char* mask_location = strchr(input, '_');
     if (!mask_location) {
         char* filename = new char[strlen(input) + 5];
@@ -29,7 +29,7 @@ char* create_network_filename(const char* input) {
     }
 
     // parse
-    uint32_t ip = 0;
+    ip = 0;
     int octets[4];
     sscanf(input, "%d.%d.%d.%d", &octets[0], &octets[1], &octets[2], &octets[3]);
     ip = (octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3];
@@ -37,7 +37,7 @@ char* create_network_filename(const char* input) {
     // apply mask
     int mask = atoi(mask_location + 1);
     if (mask < 0 || mask > 32) mask = 32;
-    uint32_t network_ip = ip & (0xFFFFFFFF << (32 - mask));
+    u_int32_t network_ip = ip & (0xFFFFFFFF << (32 - mask));
 
     octets[0] = (network_ip >> 24) & 0xFF;
     octets[1] = (network_ip >> 16) & 0xFF;

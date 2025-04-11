@@ -1,4 +1,6 @@
 #define UDP_IOV_LENGTH  5
+#define ECHO_PORT 7
+#define TIME_PORT 37
 
 struct tcp_header {
     u_int16_t source_port;

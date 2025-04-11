@@ -26,12 +26,12 @@ bool usage(const char *prog, bool is_error) {
     return is_error;
 }
 
-void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header) {
+void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header, u_int32_t my_ip) {
     ethernet_header ethernet_header;
     vector<unsigned char> payload;
 
     parse_ethernet_header(in_fd, ethernet_header);
-    print_ethernet(&ethernet_header);
+    if (debug) print_ethernet(&ethernet_header);
 
     int header_size = sizeof(ethernet_header);
 
@@ -43,24 +43,24 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header) {
 
     if (ethernet_header.type == ETHERTYPE_IPV4) {
         parse_ipv4(in_fd, ipv4_header);
-        print_ipv4(&ipv4_header);
+        if (debug) print_ipv4(&ipv4_header);
         header_size += ((ipv4_header.version_header_length & 0x0F) * 4);
         if (ipv4_header.protocol == IPPROTOCOL_TCP) {
             parse_tcp(in_fd, tcp_header);
-            print_tcp(&tcp_header);
+            if (debug) print_tcp(&tcp_header);
             header_size += sizeof(tcp_header);
         } else if (ipv4_header.protocol == IPPROTOCOL_UDP) {
             parse_udp(in_fd, udp_header);
-            print_udp(&udp_header);
+            if (debug) print_udp(&udp_header);
             header_size += sizeof(udp_header);
         } else if (ipv4_header.protocol == IPPROTOCOL_ICMP) {
             parse_icmp(in_fd, icmp_header);
-            print_icmp(&icmp_header);
+            if (debug) print_icmp(&icmp_header);
             header_size += sizeof(icmp_header);
         }
     } else if (ethernet_header.type == ETHERTYPE_ARP) {
         parse_arp(in_fd, arp_header);
-        print_arp(&arp_header);
+        if (debug) print_arp(&arp_header);
         header_size += sizeof(arp_header);
     }
 
@@ -72,13 +72,21 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header) {
             // just saw TCP
         } else if (ipv4_header.protocol == IPPROTOCOL_UDP) {
             // just saw UDP
-            if (udp_header.destination_port == 7) {
-                printf("ECHO Echo echo echo...\n");
+            if (udp_header.destination_port == ECHO_PORT) {
+                if (debug >= 1){
+                    printf("responding to UDP ECHO request!\n");
+                }
                 udp_ping(out_fd, packet_header, ethernet_header, ipv4_header, udp_header, payload);
-            } else if (udp_header.destination_port == 37) {
+            } else if (udp_header.destination_port == TIME_PORT) {
+                if (debug >= 1){
+                    printf("responding to UDP TIME request!\n");
+                }
                 send_time(out_fd, packet_header, ethernet_header, ipv4_header, udp_header);
             }
-        } else if (ipv4_header.protocol == IPPROTOCOL_ICMP && ipv4_header.destination_address == 2887745538) {  // 172.31.128.2
+        } else if (ipv4_header.protocol == IPPROTOCOL_ICMP && ipv4_header.destination_address == my_ip) {
+            if (debug >= 1){
+                printf("responding to ICMP ECHO request!\n");
+            }
             icmp_echo_reply(out_fd, packet_header, ethernet_header, ipv4_header, icmp_header, payload);
         }
     } else if (ethernet_header.type == ETHERTYPE_ARP) {
@@ -88,9 +96,10 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header) {
 
 int main(int argc, char *argv[]) {
     char *filename = NULL;
+    u_int32_t ip = 0;
 
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-i") && i + 1 < argc) filename = create_network_filename(argv[++i]);
+        if (!strcmp(argv[i], "-i") && i + 1 < argc) filename = create_network_filename(argv[++i], ip);
         else if (!strcmp(argv[i], "-h"))    return usage(argv[0], 0);
         else if (!strcmp(argv[i], "-d"))    debug = 1;
         else if (!strcmp(argv[i], "-dd"))   debug = 2;
@@ -140,8 +149,8 @@ int main(int argc, char *argv[]) {
         }
 
         unsucessful_parse_attempts = 0;
-        print_packet_header(&packet_header);
+        if (debug) print_packet_header(&packet_header);        
 
-        process_packet(in_fd, out_fd, packet_header);
+        process_packet(in_fd, out_fd, packet_header, ip);
     }
 }
