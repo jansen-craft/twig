@@ -151,6 +151,7 @@ void compute_icmp_checksum(icmp_header &header, const vector<unsigned char> &pay
 }
 
 void icmp_echo_reply(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header &ip4h, icmp_header &ich, vector<unsigned char> &payload) {
+    swap(eh.source, eh.destination);
     swap(ip4h.source_address, ip4h.destination_address);
     ich.type = ICMP_ECHO;
 

@@ -116,6 +116,7 @@ void compute_udp_checksum(ipv4_header &ipv4, udp_header &udp, const void *payloa
 }
 
 void udp_ping(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header &ip4h, udp_header &uh, vector<unsigned char> &payload) {
+    swap(eh.source, eh.destination);
     swap(ip4h.source_address, ip4h.destination_address);
     swap(uh.source_port, uh.destination_port);
 
@@ -168,6 +169,7 @@ void send_time(int fd, pcap_packet_header &pph, ethernet_header &eh, ipv4_header
     uh.source_port = ntohs(uh.source_port);
     uh.destination_port = ntohs(uh.destination_port);
 
+    swap(eh.source, eh.destination);
     swap(ip4h.source_address, ip4h.destination_address);
     swap(uh.source_port, uh.destination_port);
 

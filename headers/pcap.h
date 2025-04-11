@@ -38,6 +38,7 @@ bool parse_file_header(int fd, pcap_file_header &file_header) {
         exit(1);
     }
 
+    // Could not find anyway to test bad-endian machine, but this works on all machines we will use
     if (!correct_endian) {
         file_header.version_major = ntohs(file_header.version_major);
         file_header.version_minor = ntohs(file_header.version_minor);

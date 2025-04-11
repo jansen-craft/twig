@@ -20,10 +20,24 @@ using namespace std;
 
 int debug = 0;
 bool correct_endian = false;
+map<uint32_t,uint64_t> arp_cache;
 
 bool usage(const char *prog, bool is_error) {
     printf("Usage: %s [-h] [-d|-dd|-ddd] -i <file>\n", prog);
     return is_error;
+}
+
+void print_arp(){
+    printf("----- ARP CACHE (MAC -> IP) -----\n");
+    for (const auto& [ip, mac_int] : arp_cache) {
+        uint8_t mac[6];
+        int_to_mac(mac_int, mac);
+        print_ethernet_address(mac);
+        printf("\t");
+        print_ip_address(ip);
+        printf("\n");
+    }
+    printf("--------------------------------\n");
 }
 
 void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header, u_int32_t my_ip) {
@@ -44,6 +58,8 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header, u_
     if (ethernet_header.type == ETHERTYPE_IPV4) {
         parse_ipv4(in_fd, ipv4_header);
         if (debug) print_ipv4(&ipv4_header);
+        arp_cache[ipv4_header.source_address] = mac_to_int(ethernet_header.source);
+        arp_cache[ipv4_header.destination_address] = mac_to_int(ethernet_header.destination);
         header_size += ((ipv4_header.version_header_length & 0x0F) * 4);
         if (ipv4_header.protocol == IPPROTOCOL_TCP) {
             parse_tcp(in_fd, tcp_header);
@@ -60,6 +76,8 @@ void process_packet(int in_fd, int out_fd, pcap_packet_header &packet_header, u_
         }
     } else if (ethernet_header.type == ETHERTYPE_ARP) {
         parse_arp(in_fd, arp_header);
+        arp_cache[arp_header.sender_protocol_address] = mac_to_int(arp_header.sender_hardware_address);
+        arp_cache[arp_header.target_protocol_address] = mac_to_int(arp_header.target_hardware_address);
         if (debug) print_arp(&arp_header);
         header_size += sizeof(arp_header);
     }
@@ -152,5 +170,7 @@ int main(int argc, char *argv[]) {
         if (debug) print_packet_header(&packet_header);        
 
         process_packet(in_fd, out_fd, packet_header, ip);
+
+        if (debug == 3) print_arp();
     }
 }

@@ -6,6 +6,21 @@ using namespace std;
 typedef int32_t bpf_int32;
 typedef u_int32_t bpf_u_int32;
 
+uint64_t mac_to_int(const uint8_t mac[6]) {
+    return ((uint64_t)mac[0] << 40) | ((uint64_t)mac[1] << 32) |
+           ((uint64_t)mac[2] << 24) | ((uint64_t)mac[3] << 16) |
+           ((uint64_t)mac[4] << 8)  | mac[5];
+}
+
+void int_to_mac(uint64_t mac_int, uint8_t mac[6]) {
+    mac[0] = (mac_int >> 40) & 0xFF;
+    mac[1] = (mac_int >> 32) & 0xFF;
+    mac[2] = (mac_int >> 24) & 0xFF;
+    mac[3] = (mac_int >> 16) & 0xFF;
+    mac[4] = (mac_int >> 8)  & 0xFF;
+    mac[5] = mac_int & 0xFF;
+}
+
 void print_ethernet_address(unsigned char address[6]) {
     for (int i = 0; i < 6; ++i) {
         printf("%02x", address[i]);
